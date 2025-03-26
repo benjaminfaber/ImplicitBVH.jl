@@ -32,23 +32,29 @@ Can also be constructed from two spheres to e.g. allow merging [`BSphere`](@ref)
     BBox{T}(a::BSphere{T}, b::BSphere{T}) where T
     BBox(a::BSphere{T}, b::BSphere{T}) where T
 """
-struct BBox{T}
-    lo::NTuple{3, T}
-    up::NTuple{3, T}
+struct BBox{N, T}
+    lo::NTuple{N, T}
+    up::NTuple{N, T}
 end
 
-Base.eltype(::BBox{T}) where T = T
-Base.eltype(::Type{BBox{T}}) where T = T
+Base.eltype(::BBox{N, T}) where {N, T} = T
+Base.eltype(::Type{BBox{N, T}}) where {N, T} = T
+Base.ndims(::BBox{N, T}) where {N, T} = N
+Base.ndims(::Type{BBox{N, T}}) where {N, T} = N
 
 
 
 # Convenience constructors, with and without type parameter
 function BBox{T}(lo::AbstractVector, up::AbstractVector) where T
-    BBox(NTuple{3, eltype(lo)}(lo), NTuple{3, eltype(up)}(up))
+    N = length(lo)
+    BBox(NTuple{N, eltype(lo)}(lo), NTuple{3, eltype(up)}(up))
+end
+function BBox{N, T}(lo::AbstractVector, up::AbstractVector) where {N, T}
+    BBox(NTuple{N, T}(T.(lo)), NTuple{N, T}(T.(up)))
 end
 
 function BBox(lo::AbstractVector, up::AbstractVector)
-    BBox{eltype(lo)}(lo, up)
+    BBox{length(lo), eltype(lo)}(lo, up)
 end
 
 
@@ -67,34 +73,64 @@ function BBox{T}(p1, p2, p3) where T
     BBox{T}(lower, upper)
 end
 
+function BBox{T}(p1, p2) where T
+    lower = (minimum(p1[1], p2[1]),
+             minimum(p1[2], p2[2]))
+    upper = (maximum(p1[1], p2[1]),
+             maximum(p1[1], p2[1]))
+    BBox{T}(lower, upper)
+end
 
 # Convenience constructors, with and without explicit type parameter
 function BBox(p1, p2, p3)
     BBox{eltype(p1)}(p1, p2, p3)
 end
 
-function BBox{T}(triangle) where T
-    # Decompose triangle into its 3 vertices.
-    # Works transparently with GeometryBasics.Triangle, Vector{SVector{3, T}}, etc.
-    p1, p2, p3 = triangle
-    BBox{T}(p1, p2, p3)
+function BBox(p1, p2)
+    BBox{eltype(p1)}(p1, p2)
 end
 
-function BBox(triangle)
+function BBox{T}(triangle_or_line) where T
+    # Decompose triangle into its vertices.
+    # Works transparently with GeometryBasics.Triangle, GeometryBasics.Line, Vector{SVector{N, T}}, etc.
+    _BBox(triange_or_line, Val(length(triangle_or_line)))
+end
+
+function BBox(triangle_or_line)
+    _BBox(triange_or_line, Val(length(triangle_or_line)))
+end
+
+function _BBox(triangle, ::Val{3})
     p1, p2, p3 = triangle
     BBox{eltype(p1)}(p1, p2, p3)
 end
 
+function _BBox(line, ::Val{2})
+    p1, p2 = line
+    BBox{eltype(p1)}(p1, p2)
+end
+
 function BBox{T}(vertices::AbstractMatrix) where T
-    BBox{T}(@view(vertices[:, 1]), @view(vertices[:, 2]), @view(vertices[:, 3]))
+    _BBox(vertices, Val(size(vertices, 2)))
+end
+
+function _BBox(vertices::AbstractMatrix, ::Val{3})
+    BBox{eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]), @view(vertices[:, 3]))
+end
+
+function _BBox(vertices::AbstractMatrix, ::Val{2})
+    BBox{eltype(vertices)}(@view(vertices[:, 1], @view(vertices[:, 2])))
 end
 
 function BBox(vertices::AbstractMatrix)
-    BBox{eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]), @view(vertices[:, 3]))
+    _BBox{eltype(vertices)}(vertices, Val(size(vertices, 2)))
 end
 
 
 # Overloaded center function
-center(b::BBox{T}) where T = (T(0.5) * (b.lo[1] + b.up[1]),
-                              T(0.5) * (b.lo[2] + b.up[2]),
-                              T(0.5) * (b.lo[3] + b.up[3]))
+center(b::BBox{3, T}) where T = (T(0.5) * (b.lo[1] + b.up[1]),
+                                 T(0.5) * (b.lo[2] + b.up[2]),
+                                 T(0.5) * (b.lo[3] + b.up[3]))
+
+center(b::BBox{2, T}) where T = (T(0.5) * (b.lo[1] + b.up[1]),
+                                 T(0.5) * (b.lo[2] + b.up[2]))

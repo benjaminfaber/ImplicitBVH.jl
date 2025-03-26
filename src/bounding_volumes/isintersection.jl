@@ -1,14 +1,15 @@
-@inline function isintersection(b::BBox, p::AbstractVector, d::AbstractVector)
+@inline function isintersection(b::BBox{3, T}, p::AbstractVector, d::AbstractVector) where {T}
 
     @boundscheck begin
         @assert length(p) == 3
         @assert length(d) == 3
     end
 
-    T = eltype(d)
+    #T = eltype(d)
 
     @inbounds begin
-        inv_d = (one(T) / d[1], one(T) / d[2], one(T) / d[3])
+        #inv_d = (one(T) / d[1], one(T) / d[2], one(T) / d[3])
+        inv_d = (inv(d[1]), inv(d[2]), inv(d[3]))
 
         # Set x bounds
         t_bound_x1 = (b.lo[1] - p[1]) * inv_d[1]
@@ -37,6 +38,38 @@
     (tmin <= tmax) && (tmax >= 0)
 end
 
+@inline function isintersection(b::BBox{2, T}, p::AbstractVector, d::AbstractVector) where {T}
+
+    @boundscheck begin
+        @assert length(p) == 2
+        @assert length(d) == 2
+    end
+
+    #T = eltype(d)
+
+    @inbounds begin
+        #inv_d = (one(T) / d[1], one(T) / d[2], one(T) / d[3])
+        inv_d = (inv(d[1]), inv(d[2]))
+        
+        # Set x bounds
+        t_bound_x1 = (b.lo[1] - p[1]) * inv_d[1]
+        t_bound_x2 = (b.up[1] - p[1]) * inv_d[1]
+
+        tmin = minimum2(t_bound_x1, t_bound_x2)
+        tmax = maximum2(t_bound_x1, t_bound_x2)
+
+        # Set y bounds
+        t_bound_y1 = (b.lo[2] - p[2]) * inv_d[2]
+        t_bound_y2 = (b.up[2] - p[2]) * inv_d[2]
+
+        tmin = maximum2(tmin, minimum2(t_bound_y1, t_bound_y2))
+        tmax = minimum2(tmax, maximum2(t_bound_y1, t_bound_y2))
+    end
+        
+    # If condition satisfied ray intersects box. tmax >= 0 
+    # ensure only forwards intersections are counted
+    (tmin <= tmax) && (tmax >= 0)
+end
 
 @inline function isintersection(s::BSphere, p::AbstractVector, d::AbstractVector)
 

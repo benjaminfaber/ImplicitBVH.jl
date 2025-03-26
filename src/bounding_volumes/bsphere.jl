@@ -23,17 +23,18 @@ larger bounding volumes.
     BSphere(a::BSphere{T}, b::BSphere{T}) where T
     Base.:+(a::BSphere, b::BSphere)
 """
-struct BSphere{T}
-    x::NTuple{3, T}
+struct BSphere{N, T}
+    x::NTuple{N, T}
     r::T
 end
 
-Base.eltype(::BSphere{T}) where T = T
-Base.eltype(::Type{BSphere{T}}) where T = T
+Base.eltype(::BSphere{N, T}) where {N, T} = T
+Base.eltype(::Type{BSphere{N, T}}) where {N, T} = T
 
 
 # Convenience constructors, with and without type parameter
-BSphere{T}(x::AbstractVector, r) where T = BSphere(NTuple{3, T}(x), T(r))
+BSphere{T}(x::AbstractVector, r) where T = BSphere(NTuple{length(x), T}(x), T(r))
+BSphere(x::NTuple{N, T}, r) where {N, T} = BSphere{N, T}(x, r)
 BSphere(x::AbstractVector, r) = BSphere{eltype(x)}(x, r)
 
 
@@ -106,30 +107,59 @@ function BSphere{T}(p1, p2, p3) where T
     BSphere(centre, radius)
 end
 
+function BSphere{T}(p1, p2) where {T}
+    a = (T(p1[1]), T(p1[2]))
+    b = (T(p2[1]), T(p2[2]))
+    centre = (T(0.5) * (a[1] + b[1]),
+              T(0.5) * (a[2] + b[2]))
+    radius = dist2(centre, a)
+
+    BSphere(centre, radius)
+end
 
 # Convenience constructors, with and without explicit type parameter
 function BSphere(p1, p2, p3)
     BSphere{eltype(p1)}(p1, p2, p3)
 end
 
-function BSphere{T}(triangle) where T
-    # Decompose triangle into its 3 vertices.
-    # Works transparently with GeometryBasics.Triangle, Vector{SVector{3, T}}, etc.
-    p1, p2, p3 = triangle
-    BSphere{T}(p1, p2, p3)
+function BSphere(p1, p2)
+    BSphere{eltype(p1)}(p1, p2)
 end
 
-function BSphere(triangle)
+function BSphere{T}(triangle_or_line) where T
+    # Decompose triangle into its vertices.
+    # Works transparently with GeometryBasics.Triangle, GeometryBasics.Line, Vector{SVector{N, T}}, etc.
+    _BSphere(triangle_or_line, Val(length(triangle_or_line)))
+end
+
+function BSphere(triangle_or_line)
+    _BSphere(triangle_or_line, Val(length(triangle_or_line)))
+end
+
+function _BSphere(triangle, ::Val{3})
     p1, p2, p3 = triangle
     BSphere{eltype(p1)}(p1, p2, p3)
 end
 
+function _BSphere(line, ::Val{2})
+    p1, p2 = line
+    BSphere{eltype(p1)}(p1, p2)
+end
+
 function BSphere{T}(vertices::AbstractMatrix) where T
-    BSphere{T}(@view(vertices[:, 1]), @view(vertices[:, 2]), @view(vertices[:, 3]))
+    _BSphere(vertices, Val(size(vertices, 2)))
 end
 
 function BSphere(vertices::AbstractMatrix)
+    _BSphere(vertices, Val(size(vertices, 2)))
+end
+
+function _BSphere(vertices::AbstractMatrix, ::Val{3})
     BSphere{eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]), @view(vertices[:, 3]))
+end
+
+function _BSphere(vertices::AbstractMatrix, ::Val{2})
+    BSphere{eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]))
 end
 
 

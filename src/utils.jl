@@ -162,6 +162,9 @@ function dot3(x, y)
     x[1] * y[1] + x[2] * y[2] + x[3] * y[3]
 end
 
+function dot2(x, y)
+    x[1] * y[1] + x[2] * y[2]
+end
 
 function dist3sq(x, y)
     (x[1] - y[1]) * (x[1] - y[1]) +
@@ -169,8 +172,13 @@ function dist3sq(x, y)
     (x[3] - y[3]) * (x[3] - y[3])
 end
 
+function dist2sq(x, y)
+    (x[1] - y[1]) * (x[1] - y[1]) + 
+    (x[2] - y[2]) * (x[2] - y[2])
+end
 
 dist3(x, y) = sqrt(dist3sq(x, y))
+dist2(x, y) = sqrt(dist2sq(x, y))
 
 minimum2(a, b) = a < b ? a : b
 minimum3(a, b, c) = a < b ? minimum2(a, c) : minimum2(b, c)
