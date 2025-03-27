@@ -59,6 +59,7 @@ function BBox(p1, p2, p3)
 end
 
 function BBox(p1, p2)
+    @show length(p1)
     _BBox(p1, p2, Val(length(p1)))
 end
 
@@ -125,12 +126,12 @@ end
 
 function _BBox(triangle, ::Val{3})
     p1, p2, p3 = triangle
-    _BBox(p1, p2, p3, Val(3))
+    _BBox(p1, p2, p3, Val(length(p1)))
 end
 
 function _BBox(line, ::Val{2})
     p1, p2 = line
-    _BBox(p1, p2, Val(2))
+    _BBox(p1, p2, Val(length(p1)))
 end
 
 function BBox{N, T}(vertices::AbstractMatrix) where {N, T}

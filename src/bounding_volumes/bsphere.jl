@@ -41,7 +41,7 @@ BSphere(x::AbstractVector, r) = BSphere{length(x), eltype(x)}(x, r)
 
 
 # Constructors from triangles
-function BSphere(p1, p2, p3) where T
+function BSphere(p1, p2, p3)
 
     # Adapted from https://realtimecollisiondetection.net/blog/?p=20
     a = (T(p1[1]), T(p1[2]), T(p1[3]))
@@ -109,7 +109,7 @@ function BSphere(p1, p2, p3) where T
     BSphere{3, T}(centre, radius)
 end
 
-function BSphere(p1, p2) where {T}
+function BSphere(p1, p2)
     a = (T(p1[1]), T(p1[2]))
     b = (T(p2[1]), T(p2[2]))
     centre = (T(0.5) * (a[1] + b[1]),
