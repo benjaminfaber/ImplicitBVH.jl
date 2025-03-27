@@ -99,7 +99,7 @@ Works transparently for SVector, Vector, etc. with eltype UInt16, UInt32 or UInt
 end
 
 
-function _compute_extrema(bounding_volumes::AbstractVector, options)
+function _compute_extrema(::Val{3}, bounding_volumes::AbstractVector, options)
     # Fallback CPU version; extremely simple operations, so left single threaded
     xmin, ymin, zmin = center(bounding_volumes[1])
     xmax, ymax, zmax = xmin, ymin, zmin
@@ -120,6 +120,24 @@ function _compute_extrema(bounding_volumes::AbstractVector, options)
     (xmin, ymin, zmin), (xmax, ymax, zmax)
 end
 
+function _compute_extrema(::Val{2}, bounding_volumes::AbstractVector, options)
+    # Fallback CPU version; extremely simple operations, so left single threaded
+    xmin, ymin = center(bounding_volumes[1])
+    xmax, ymax = xmin, ymin
+
+    @inbounds for i in 2:length(bounding_volumes)
+
+        xc, yc = center(bounding_volumes[i])
+
+        xc < xmin && (xmin = xc)
+        yc < ymin && (ymin = yc)
+
+        xc > xmax && (xmax = xc)
+        yc > ymax && (ymax = yc)
+    end
+
+    (xmin, ymin), (xmax, ymax)
+end
 
 function _compute_extrema(bounding_volumes::AbstractGPUVector, options)
     # GPU implementation
@@ -166,16 +184,19 @@ function _compute_extrema(bounding_volumes::AbstractGPUVector, options)
     xyzmin, xyzmax
 end
 
-
 """
     bounding_volumes_extrema(bounding_volumes)
 
 Compute exclusive lower and upper bounds in iterable of bounding volumes, e.g. Vector{BBox}.
 """
 function bounding_volumes_extrema(bounding_volumes::AbstractVector, options=BVHOptions())
+    N = ndims(first(bounding_volumes))
+    _bounding_volumes_extrema(Val(N), bounding_volumes, options)
+end
 
+function _bounding_volumes_extrema(::Val{3}, bounding_volumes::AbstractVector, options=BVHOptions())
     # Compute exact extrema
-    (xmin, ymin, zmin), (xmax, ymax, zmax) = _compute_extrema(bounding_volumes, options)
+    (xmin, ymin, zmin), (xmax, ymax, zmax) = _compute_extrema(Val(3), bounding_volumes, options)
 
     # Expand extrema by float precision to ensure morton codes are exclusively bounded by them
     T = typeof(xmin)
@@ -191,6 +212,22 @@ function bounding_volumes_extrema(bounding_volumes::AbstractVector, options=BVHO
     (xmin, ymin, zmin), (xmax, ymax, zmax)
 end
 
+function _bounding_volumes_extrema(::Val{2}, bounding_volumes::AbstractVector, options=BVHOptions())
+    # Compute exact extrema
+    (xmin, ymin), (xmax, ymax) = _compute_extrema(Val(2), bounding_volumes, options)
+
+    # Expand extrema by float precision to ensure morton codes are exclusively bounded by them
+    T = typeof(xmin)
+
+    xmin = xmin - relative_precision(T) * abs(xmin) - floatmin(T)
+    ymin = ymin - relative_precision(T) * abs(ymin) - floatmin(T)
+
+    xmax = xmax + relative_precision(T) * abs(xmax) + floatmin(T)
+    ymax = ymax + relative_precision(T) * abs(ymax) + floatmin(T)
+    
+
+    (xmin, ymin), (xmax, ymax)
+end
 
 """
     morton_encode!(
@@ -221,11 +258,11 @@ function morton_encode!(
     maxs,
     options=BVHOptions(),
 ) where {U <: MortonUnsigned}
-
+    N = ndims(first(bounding_volumes))
     # Bounds checking
     @argcheck firstindex(mortons) == firstindex(bounding_volumes) == 1
     @argcheck length(mortons) == length(bounding_volumes)
-    @argcheck length(mins) == length(maxs) == 3
+    @argcheck length(mins) == length(maxs) == N
 
     # Trivial case
     length(bounding_volumes) == 0 && return nothing
