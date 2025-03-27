@@ -64,8 +64,8 @@ function BBox(a::BBox{2, T}, b::BBox{2, T}) where T
     lower = (minimum2(a.lo[1], b.lo[1]),
              minimum2(a.lo[2], b.lo[2]))
 
-    upper = (minimum2(a.up[1], b.up[1]),
-             minimum2(a.up[2], b.up[2]))
+    upper = (maximum2(a.up[1], b.up[1]),
+             maximum2(a.up[2], b.up[2]))
     BBox{2, T}(lower, upper)
 end
 
@@ -74,24 +74,20 @@ Base.:+(a::BBox, b::BBox) = BBox(a, b)
 
 
 # Convert BSphere to BBox
-function BBox{T}(a::BSphere{3, T}) where T
+function BBox(a::BSphere{3, T}) where {T}
     lower = (a.x[1] - a.r, a.x[2] - a.r, a.x[3] - a.r)
     upper = (a.x[1] + a.r, a.x[2] + a.r, a.x[3] + a.r)
     BBox(lower, upper)
 end
 
-function BBox{T}(a::BSphere{2, T}) where {T}
+function BBox(a::BSphere{2, T}) where {T}
     lower = (a.x[1] - a.r, a.x[2] - a.r)
     upper = (a.x[1] + a.r, a.x[2] + a.r)
     BBox(lower, upper)
 end
 
-function BBox(a::BSphere{N, T}) where {N, T}
-    BBox{T}(a)
-end
-
 # Merge two BSphere into enclosing BBox
-function BBox{T}(a::BSphere{3, T}, b::BSphere{3, T}) where T
+function BBox(a::BSphere{3, T}, b::BSphere{3, T}) where T
     length = dist3(a.x, b.x)
 
     # a is enclosed within b
@@ -116,7 +112,7 @@ function BBox{T}(a::BSphere{3, T}, b::BSphere{3, T}) where T
     end
 end
 
-function BBox{T}(a::BSphere{2, T}, b::BSphere{2, T}) where T
+function BBox(a::BSphere{2, T}, b::BSphere{2, T}) where T
     length = dist2(a.x, b.x)
 
     # a is enclosed within b
@@ -139,6 +135,3 @@ function BBox{T}(a::BSphere{2, T}, b::BSphere{2, T}) where T
     end
 end
 
-function BBox(a::BSphere{N, T}, b::BSphere{N, T}) where {N, T}
-    BBox{T}(a, b)
-end
