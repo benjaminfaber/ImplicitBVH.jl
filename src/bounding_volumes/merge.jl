@@ -57,7 +57,7 @@ function BBox(a::BBox{3, T}, b::BBox{3, T}) where T
              maximum2(a.up[2], b.up[2]),
              maximum2(a.up[3], b.up[3]))
 
-    BBox{T}(lower, upper)
+    BBox{3, T}(lower, upper)
 end
 
 function BBox(a::BBox{2, T}, b::BBox{2, T}) where T

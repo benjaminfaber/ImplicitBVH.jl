@@ -150,6 +150,8 @@ function Base.show(io::IO, b::BVH{I, VN, VL, VM, VO}) where {I, VN, VL, VM, VO}
     )
 end
 
+Base.ndims(::BVH{I, VN, VL, VM, VO}) where {I, VN, VL, VM, VO} = Base.ndims(eltype(VN))
+Base.ndims(::Type{BVH{I, VN, VL, VM, VO}}) where {I, VN, VL, VM, VO} = Base.ndims(eltype(VN))
 
 # Normal constructor which builds BVH
 function BVH(
