@@ -71,14 +71,14 @@ end
     (tmin <= tmax) && (tmax >= 0)
 end
 
-@inline function isintersection(s::BSphere, p::AbstractVector, d::AbstractVector)
+@inline function isintersection(s::BSphere{3, T}, p::AbstractVector, d::AbstractVector) where {T}
 
     @boundscheck begin
         @assert length(p) == 3
         @assert length(d) == 3
     end
 
-    T = eltype(d)
+    #T = eltype(d)
 
     @inbounds begin
         a = dot3(d, d)

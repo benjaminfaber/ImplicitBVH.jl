@@ -1,8 +1,11 @@
 # Contact detection
-function iscontact(a::BSphere, b::BSphere)
+function iscontact(a::BSphere{3, T}, b::BSphere{3, T}) where T
     dist3sq(a.x, b.x) <= (a.r + b.r) * (a.r + b.r)
 end
 
+function iscontact(a::BSphere{2, T}, b::BSphere{2, T}) where T
+    dist2sq(a.x, b.x) <= (a.r + b.r) * (a.r + b.r)
+end
 
 function iscontact(a::BBox{3, T}, b::BBox{3, T}) where {T}
     (a.up[1] >= b.lo[1] && a.lo[1] <= b.up[1]) &&
@@ -16,7 +19,7 @@ function iscontact(a::BBox{2, T}, b::BBox{2, T}) where {T}
 end
 
 # Contact detection between heterogeneous BVs - only needed when one BVH has exactly one leaf
-function iscontact(a::BSphere, b::BBox{3, T}) where {T}
+function iscontact(a::BSphere{3, T}, b::BBox{3, T}) where {T}
     # This is an edge case, used for broad-phase collision detection, so we simply take the
     # sphere's bounding box, as a full sphere-box contact detection is computationally heavy
     ab = BBox(
@@ -26,7 +29,7 @@ function iscontact(a::BSphere, b::BBox{3, T}) where {T}
     iscontact(ab, b)
 end
 
-function iscontact(a::BSphere, b::BBox{2, T}) where {T}
+function iscontact(a::BSphere{2, T}, b::BBox{2, T}) where {T}
     # This is an edge case, used for broad-phase collision detection, so we simply take the
     # sphere's bounding box, as a full sphere-box contact detection is computationally heavy
     ab = BBox(

@@ -30,16 +30,18 @@ end
 
 Base.eltype(::BSphere{N, T}) where {N, T} = T
 Base.eltype(::Type{BSphere{N, T}}) where {N, T} = T
+Base.ndims(::BSphere{N, T}) where {N, T} = N
+Base.ndims(::Type{BSphere{N, T}}) where {N, T} = N
 
 
 # Convenience constructors, with and without type parameter
-BSphere{T}(x::AbstractVector, r) where T = BSphere(NTuple{length(x), T}(x), T(r))
+BSphere{N, T}(x::AbstractVector, r) where {N, T} = BSphere(NTuple{N, T}(x), T(r))
 BSphere(x::NTuple{N, T}, r) where {N, T} = BSphere{N, T}(x, r)
-BSphere(x::AbstractVector, r) = BSphere{eltype(x)}(x, r)
+BSphere(x::AbstractVector, r) = BSphere{length(x), eltype(x)}(x, r)
 
 
 # Constructors from triangles
-function BSphere{T}(p1, p2, p3) where T
+function BSphere(p1, p2, p3) where T
 
     # Adapted from https://realtimecollisiondetection.net/blog/?p=20
     a = (T(p1[1]), T(p1[2]), T(p1[3]))
@@ -104,32 +106,32 @@ function BSphere{T}(p1, p2, p3) where T
         end
     end
 
-    BSphere(centre, radius)
+    BSphere{3, T}(centre, radius)
 end
 
-function BSphere{T}(p1, p2) where {T}
+function BSphere(p1, p2) where {T}
     a = (T(p1[1]), T(p1[2]))
     b = (T(p2[1]), T(p2[2]))
     centre = (T(0.5) * (a[1] + b[1]),
               T(0.5) * (a[2] + b[2]))
     radius = dist2(centre, a)
 
-    BSphere(centre, radius)
+    BSphere{2, T}(centre, radius)
 end
 
 # Convenience constructors, with and without explicit type parameter
-function BSphere(p1, p2, p3)
-    BSphere{eltype(p1)}(p1, p2, p3)
-end
+#function BSphere(p1, p2, p3)
+#   BSphere{3, eltype(p1)}(p1, p2, p3)
+#end
 
-function BSphere(p1, p2)
-    BSphere{eltype(p1)}(p1, p2)
-end
+#function BSphere(p1, p2)
+#    BSphere{2, eltype(p1)}(p1, p2)
+#end
 
-function BSphere{T}(triangle_or_line) where T
+function BSphere{N, T}(triangle_or_line) where {N, T}
     # Decompose triangle into its vertices.
     # Works transparently with GeometryBasics.Triangle, GeometryBasics.Line, Vector{SVector{N, T}}, etc.
-    _BSphere(triangle_or_line, Val(length(triangle_or_line)))
+    _BSphere(triangle_or_line, Val(N))
 end
 
 function BSphere(triangle_or_line)
@@ -138,16 +140,16 @@ end
 
 function _BSphere(triangle, ::Val{3})
     p1, p2, p3 = triangle
-    BSphere{eltype(p1)}(p1, p2, p3)
+    BSphere{3, eltype(p1)}(p1, p2, p3)
 end
 
 function _BSphere(line, ::Val{2})
     p1, p2 = line
-    BSphere{eltype(p1)}(p1, p2)
+    BSphere{2, eltype(p1)}(p1, p2)
 end
 
-function BSphere{T}(vertices::AbstractMatrix) where T
-    _BSphere(vertices, Val(size(vertices, 2)))
+function BSphere{N, T}(vertices::AbstractMatrix) where {N, T}
+    _BSphere(vertices, Val(N))
 end
 
 function BSphere(vertices::AbstractMatrix)
@@ -155,11 +157,11 @@ function BSphere(vertices::AbstractMatrix)
 end
 
 function _BSphere(vertices::AbstractMatrix, ::Val{3})
-    BSphere{eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]), @view(vertices[:, 3]))
+    BSphere{3, eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]), @view(vertices[:, 3]))
 end
 
 function _BSphere(vertices::AbstractMatrix, ::Val{2})
-    BSphere{eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]))
+    BSphere{2, eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]))
 end
 
 

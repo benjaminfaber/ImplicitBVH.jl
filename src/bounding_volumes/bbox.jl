@@ -45,22 +45,25 @@ Base.ndims(::Type{BBox{N, T}}) where {N, T} = N
 
 
 # Convenience constructors, with and without type parameter
-function BBox{T}(lo::AbstractVector, up::AbstractVector) where T
-    N = length(lo)
-    BBox(NTuple{N, eltype(lo)}(lo), NTuple{3, eltype(up)}(up))
-end
-function BBox{N, T}(lo::AbstractVector, up::AbstractVector) where {N, T}
-    BBox(NTuple{N, T}(T.(lo)), NTuple{N, T}(T.(up)))
-end
+#function BBox{N, T}(lo::AbstractVector, up::AbstractVector) where {N, T}
+#    BBox{N, T}(NTuple{N, eltype(lo)}(lo), NTuple{N, eltype(up)}(up))
+#end
 
-function BBox(lo::AbstractVector, up::AbstractVector)
-    BBox{length(lo), eltype(lo)}(lo, up)
-end
+#function BBox(lo::AbstractVector, up::AbstractVector)
+#    BBox{length(lo), eltype(lo)}(lo, up)
+#end
 
 
+function BBox(p1, p2, p3)
+    _BBox(p1, p2, p3, Val(length(p1)))
+end
+
+function BBox(p1, p2)
+    _BBox(p1, p2, Val(length(p1)))
+end
 
 # Constructors from triangles
-function BBox{T}(p1, p2, p3) where T
+function _BBox(p1, p2, p3, ::Val{3})
 
     lower = (minimum3(p1[1], p2[1], p3[1]),
              minimum3(p1[2], p2[2], p3[2]),
@@ -70,48 +73,68 @@ function BBox{T}(p1, p2, p3) where T
              maximum3(p1[2], p2[2], p3[2]),
              maximum3(p1[3], p2[3], p3[3]))
    
-    BBox{T}(lower, upper)
+    BBox{3, eltype(lower)}(lower, upper)
 end
 
-function BBox{T}(p1, p2) where T
-    lower = (minimum(p1[1], p2[1]),
-             minimum(p1[2], p2[2]))
-    upper = (maximum(p1[1], p2[1]),
-             maximum(p1[1], p2[1]))
-    BBox{T}(lower, upper)
+function _BBox(p1, p2, p3, ::Val{2})
+    lower = (minimum3(p1[1], p2[1], p3[1]),
+             minimum3(p1[2], p2[2], p3[2]))
+
+    upper = (maximum3(p1[1], p2[1], p3[1]),
+             maximum3(p1[2], p2[2], p3[2]))
+    BBox{2, eltype(lower)}(lower, upper)
+end
+
+function _BBox(p1, p2, ::Val{3})
+    lower = (minimum2(p1[1], p2[1]),
+             minimum2(p1[2], p2[2]),
+             minimum2(p1[3], p2[3]))
+
+    upper = (maximum2(p1[1], p2[1]),
+             maximum2(p1[2], p2[2]),
+             maximum2(p1[3], p2[3]))
+    BBox{3, eltype(lower)}(lower, upper)
+end
+
+function _BBox(p1, p2, ::Val{2})
+    lower = (minimum2(p1[1], p2[1]),
+             minimum2(p1[2], p2[2]))
+    upper = (maximum2(p1[1], p2[1]),
+             maximum2(p1[2], p2[2]))
+    BBox{2, eltype(lower)}(lower, upper)
 end
 
 # Convenience constructors, with and without explicit type parameter
-function BBox(p1, p2, p3)
-    BBox{eltype(p1)}(p1, p2, p3)
-end
+#function BBox(p1, p2, p3)
+#    BBox{3, eltype(p1)}(p1, p2, p3)
+#end
 
-function BBox(p1, p2)
-    BBox{eltype(p1)}(p1, p2)
-end
+#unction BBox(p1, p2)
+#    BBox{2, eltype(p1)}(p1, p2)
+#end
 
-function BBox{T}(triangle_or_line) where T
+function BBox{N, T}(triangle_or_line) where {N, T}
     # Decompose triangle into its vertices.
     # Works transparently with GeometryBasics.Triangle, GeometryBasics.Line, Vector{SVector{N, T}}, etc.
     _BBox(triange_or_line, Val(length(triangle_or_line)))
 end
 
 function BBox(triangle_or_line)
-    _BBox(triange_or_line, Val(length(triangle_or_line)))
+    _BBox(triangle_or_line, Val(length(triangle_or_line)))
 end
 
 function _BBox(triangle, ::Val{3})
     p1, p2, p3 = triangle
-    BBox{eltype(p1)}(p1, p2, p3)
+    _BBox(p1, p2, p3, Val(3))
 end
 
 function _BBox(line, ::Val{2})
     p1, p2 = line
-    BBox{eltype(p1)}(p1, p2)
+    _BBox(p1, p2, Val(2))
 end
 
-function BBox{T}(vertices::AbstractMatrix) where T
-    _BBox(vertices, Val(size(vertices, 2)))
+function BBox{N, T}(vertices::AbstractMatrix) where {N, T}
+    _BBox(vertices, Val(N))
 end
 
 function _BBox(vertices::AbstractMatrix, ::Val{3})
@@ -119,11 +142,12 @@ function _BBox(vertices::AbstractMatrix, ::Val{3})
 end
 
 function _BBox(vertices::AbstractMatrix, ::Val{2})
-    BBox{eltype(vertices)}(@view(vertices[:, 1], @view(vertices[:, 2])))
+    BBox{eltype(vertices)}(@view(vertices[:, 1]), @view(vertices[:, 2]))
 end
 
 function BBox(vertices::AbstractMatrix)
-    _BBox{eltype(vertices)}(vertices, Val(size(vertices, 2)))
+    N = size(vertices, 2)
+    _BBox{N, eltype(vertices)}(vertices, Val(N))
 end
 
 
