@@ -71,6 +71,22 @@ end
     (tmin <= tmax) && (tmax >= 0)
 end
 
+@inline function isintersection(b::BBox{3, T}, p::AbstractVector) where {T}
+    @boundscheck begin
+        @assert length(p) == 3
+    end
+
+    (b.lo[1] <= p[1] <= b.up[1]) && (b.lo[2] <= p[2] <= b.up[2]) && (b.lo[3] <= p[3] <= b.up[3])
+end
+
+@inline function isintersection(b::BBox{2, T}, p::AbstractVector) where {T}
+    @boundscheck begin
+        @assert length(p) == 2
+    end
+
+    (b.lo[1] <= p[1] <= b.up[1]) && (b.lo[2] <= p[2] <= b.up[2])
+end
+
 @inline function isintersection(s::BSphere{3, T}, p::AbstractVector, d::AbstractVector) where {T}
 
     @boundscheck begin

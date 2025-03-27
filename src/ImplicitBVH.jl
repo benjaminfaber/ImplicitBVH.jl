@@ -30,6 +30,7 @@ include("bounding_volumes/bounding_volumes.jl")
 include("build.jl")
 include("traverse/traverse.jl")
 include("raytrace/raytrace.jl")
+include("predicates/points.jl")
 include("utils_post.jl")
 
 end     # module ImplicitBVH
