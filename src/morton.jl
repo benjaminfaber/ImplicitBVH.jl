@@ -54,6 +54,17 @@ end
     s
 end
 
+@inline function morton_split2(v::UInt32)
+    # Extract first 15 bits
+    s = v & 0x00007fff
+
+    s = (s | s << 8) & 0x003f80ff
+    s = (s | s << 4) & 0x03c38f0f
+    s = (s | s << 2) & 0x0cccb333
+    s = (s | s << 1) & 0x15555555
+
+    s
+end
 
 """
     morton_scaling(::Type{UInt16}) = 2^5
@@ -62,10 +73,14 @@ end
 
 Exclusive maximum number possible to use for 3D Morton encoding for each type.
 """
-morton_scaling(::Type{UInt16}) = 2^5
-morton_scaling(::Type{UInt32}) = 2^10
-morton_scaling(::Type{UInt64}) = 2^21
+morton_scaling3(::Type{UInt16}, ::Val{3}) = 2^5
+morton_scaling3(::Type{UInt32}, ::Val{3}) = 2^10
+morton_scaling3(::Type{UInt64}, ::Val{3}) = 2^21
 
+
+morton_scaling2(::Type{UInt16}, ::Val{2}) = 2^7
+morton_scaling2(::Type{UInt32}, ::Val{2}) = 2^15
+morton_scaling2(::Type{UInt64}, ::Val{2}) = 2^31
 
 """
     relative_precision(::Type{Float16}) = 1e-2
@@ -86,7 +101,15 @@ Return Morton code for a single 3D position `centre` scaled uniformly between `m
 Works transparently for SVector, Vector, etc. with eltype UInt16, UInt32 or UInt64.
 """
 @inline function morton_encode_single(centre, mins, maxs, ::Type{U}=UInt32) where {U <: MortonUnsigned}
-    scaling = morton_scaling(U)
+    @boundscheck begin
+        @assert size(centre) == size(mins)
+        @assert size(mins) == size(maxs)
+    end
+    _morton_encode_single(Val(length(centre)), centre, mins, maxs, U)
+end
+
+@inline function _morton_encode_single(::Val{3}, centre, mins, maxs, ::Type{U}=UInt32) where {U <: MortonUnsigned}
+    scaling = morton_scaling3(U)
     m = zero(U)
 
     @inbounds for i in 1:3
@@ -98,6 +121,18 @@ Works transparently for SVector, Vector, etc. with eltype UInt16, UInt32 or UInt
     m
 end
 
+@inline function _morton_encode_single(::Val{2}, centre, mins, maxs, ::Type{U}=UInt32) where {U <: MortonUnsigned}
+    scaling = morton_scaling2(U)
+    m = zero(U)
+
+    @inbounds for i in 1:2
+        scaled = (centre[i] - mins[i]) / (maxs[i] - mins[i])    # Scaling number between (0, 1)
+        index = unsafe_trunc(U, scaled * scaling)               # Scaling to (0, morton_scaling)
+        m += morton_split2(index) << (2 - i)                    # Shift into position - XYXYXY
+    end
+
+    m
+end
 
 function _compute_extrema(::Val{3}, bounding_volumes::AbstractVector, options)
     # Fallback CPU version; extremely simple operations, so left single threaded
@@ -190,7 +225,7 @@ end
 Compute exclusive lower and upper bounds in iterable of bounding volumes, e.g. Vector{BBox}.
 """
 function bounding_volumes_extrema(bounding_volumes::AbstractVector, options=BVHOptions())
-    N = ndims(first(bounding_volumes))
+    N = ndims(eltype(bounding_volumes))
     _bounding_volumes_extrema(Val(N), bounding_volumes, options)
 end
 
@@ -225,7 +260,6 @@ function _bounding_volumes_extrema(::Val{2}, bounding_volumes::AbstractVector, o
     xmax = xmax + relative_precision(T) * abs(xmax) + floatmin(T)
     ymax = ymax + relative_precision(T) * abs(ymax) + floatmin(T)
     
-
     (xmin, ymin), (xmax, ymax)
 end
 
