@@ -54,6 +54,24 @@ end
     s
 end
 
+"""
+    morton_split2(v::UInt16)
+    morton_split2(v::UInt32)
+    morton_split2(v::UInt64)
+
+Shift a number's individual bits such that they have one zero between them.
+"""
+@inline function morton_split2(v::UInt16)
+    # Extract first 7 bits
+    s = v & 0x007f
+
+    s = (s | s << 4) & 0x070f
+    s = (s | s << 2) & 0x0b33
+    s = (s | s << 1) & 0x1555
+
+    s
+end
+
 @inline function morton_split2(v::UInt32)
     # Extract first 15 bits
     s = v & 0x00007fff
@@ -66,21 +84,40 @@ end
     s
 end
 
+@inline function morton_split2(v::UInt64)
+    # Extract first 31 bits
+    s = v & 0x0_7fff_ffff
+
+    s = (s | s << 16) & 0x00007fff0000ffff
+    s = (s | s << 8) & 0x007f00ff00ff00ff
+    s = (s | s << 4) & 0x070f0f0f0f0f0f0f
+    s = (s | s << 2) & 0x1333333333333333
+    s = (s | s << 1) & 0x1555555555555555
+
+    s
+end
+
 """
-    morton_scaling(::Type{UInt16}) = 2^5
-    morton_scaling(::Type{UInt32}) = 2^10
-    morton_scaling(::Type{UInt64}) = 2^21
+    morton_scaling3(::Type{UInt16}) = 2^5
+    morton_scaling3(::Type{UInt32}) = 2^10
+    morton_scaling3(::Type{UInt64}) = 2^21
 
 Exclusive maximum number possible to use for 3D Morton encoding for each type.
 """
-morton_scaling3(::Type{UInt16}, ::Val{3}) = 2^5
-morton_scaling3(::Type{UInt32}, ::Val{3}) = 2^10
-morton_scaling3(::Type{UInt64}, ::Val{3}) = 2^21
+morton_scaling3(::Type{UInt16}) = 2^5
+morton_scaling3(::Type{UInt32}) = 2^10
+morton_scaling3(::Type{UInt64}) = 2^21
 
+"""
+    morton_scaling2(::Type{UInt16}) = 2^7
+    morton_scaling2(::Type{UInt32}) = 2^15
+    morton_scaling2(::Type{UInt64}) = 2^31
 
-morton_scaling2(::Type{UInt16}, ::Val{2}) = 2^7
-morton_scaling2(::Type{UInt32}, ::Val{2}) = 2^15
-morton_scaling2(::Type{UInt64}, ::Val{2}) = 2^31
+Exclusive maximum number possible to use for 2D Morton encoding for each type.
+"""
+morton_scaling2(::Type{UInt16}) = 2^7
+morton_scaling2(::Type{UInt32}) = 2^15
+morton_scaling2(::Type{UInt64}) = 2^31
 
 """
     relative_precision(::Type{Float16}) = 1e-2
@@ -91,7 +128,7 @@ Relative precision value for floating-point types.
 """
 relative_precision(::Type{Float16}) = Float16(1e-2)
 relative_precision(::Type{Float32}) = Float32(1e-5)
-relative_precision(::Type{Float64}) = Float64(1e-14)
+relative_precision(::Type{Float64}) = Float64(1e-14)p8
 
 
 """
