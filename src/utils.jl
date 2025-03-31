@@ -41,7 +41,7 @@ logically incorrect results will be silently produced.
     $(TYPEDFIELDS)
 
 """
-struct BVHOptions{I <: Integer, T}
+struct BVHOptions{N, I <: Integer, T}
 
     # Example index from which to deduce type
     index_exemplar::I
@@ -58,13 +58,14 @@ struct BVHOptions{I <: Integer, T}
 
     # Minima / maxima
     compute_extrema::Bool
-    mins::NTuple{3, T}
-    maxs::NTuple{3, T}
+    mins::NTuple{N, T}
+    maxs::NTuple{N, T}
 end
 
 
 function BVHOptions(;
 
+    dims::Int                       = 3,
     # Example index from which to deduce type
     index_exemplar::I               = Int32(0),
 
@@ -80,9 +81,9 @@ function BVHOptions(;
 
     # Minima / maxima
     compute_extrema::Bool           = true,
-    mins::NTuple{3, T}              = (NaN32, NaN32, NaN32),
-    maxs::NTuple{3, T}              = (NaN32, NaN32, NaN32),
-) where {I <: Integer, T}
+    mins::NTuple{N, T}              = (NaN32, NaN32, NaN32),
+    maxs::NTuple{N, T}              = (NaN32, NaN32, NaN32),
+) where {N, I <: Integer, T}
 
     # Correctness checks
     @argcheck num_threads > 0
@@ -95,6 +96,10 @@ function BVHOptions(;
     if !compute_extrema
         @argcheck all(isfinite, mins)
         @argcheck all(isfinite, maxs)
+    end
+    @boundscheck begin
+        @assert length(mins) == dims
+        @assert length(maxs) == dims
     end
 
     BVHOptions(

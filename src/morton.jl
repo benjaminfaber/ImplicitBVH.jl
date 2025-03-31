@@ -128,7 +128,7 @@ Relative precision value for floating-point types.
 """
 relative_precision(::Type{Float16}) = Float16(1e-2)
 relative_precision(::Type{Float32}) = Float32(1e-5)
-relative_precision(::Type{Float64}) = Float64(1e-14)p8
+relative_precision(::Type{Float64}) = Float64(1e-14)
 
 
 """
