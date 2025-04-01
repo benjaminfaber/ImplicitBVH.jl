@@ -122,3 +122,19 @@ end
         return false
     end
 end
+
+@inline function isintersection(s::BSphere{2, T}, p::AbstractVector) where {T}
+    @boundscheck begin
+        @assert length(p) == 3
+    end
+
+    dist3sq(s.x, p) < s.r ^ 2
+end
+
+@inline function isintersection(s::BSphere{2, T}, p::AbstractVector) where {T}
+    @boundscheck begin
+        @assert length(p) == 2
+    end
+
+    dist2sq(s.x, p) < s.r ^ 2
+end

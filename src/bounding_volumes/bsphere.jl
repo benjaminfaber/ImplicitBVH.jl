@@ -36,8 +36,8 @@ Base.ndims(::Type{BSphere{N, T}}) where {N, T} = N
 
 # Convenience constructors, with and without type parameter
 BSphere{N, T}(x::AbstractVector, r) where {N, T} = BSphere(NTuple{N, T}(x), T(r))
-BSphere(x::NTuple{N, T}, r) where {N, T} = BSphere{N, T}(x, r)
-BSphere(x::AbstractVector, r) = BSphere{length(x), eltype(x)}(x, r)
+BSphere(x::NTuple{N, T}, r::R) where {N, T, R <: Real} = BSphere{N, T}(x, r)
+BSphere(x::AbstractVector, r::R) where {R <: Real} = BSphere{length(x), eltype(x)}(x, r)
 
 
 # Constructors from triangles
@@ -110,6 +110,7 @@ function BSphere(p1, p2, p3)
 end
 
 function BSphere(p1, p2)
+    T = promote_type(eltype(p1), eltype(p2))
     a = (T(p1[1]), T(p1[2]))
     b = (T(p2[1]), T(p2[2]))
     centre = (T(0.5) * (a[1] + b[1]),
@@ -140,12 +141,12 @@ end
 
 function _BSphere(triangle, ::Val{3})
     p1, p2, p3 = triangle
-    BSphere{3, eltype(p1)}(p1, p2, p3)
+    BSphere(p1, p2, p3)
 end
 
 function _BSphere(line, ::Val{2})
     p1, p2 = line
-    BSphere{2, eltype(p1)}(p1, p2)
+    BSphere(p1, p2)
 end
 
 function BSphere{N, T}(vertices::AbstractMatrix) where {N, T}
