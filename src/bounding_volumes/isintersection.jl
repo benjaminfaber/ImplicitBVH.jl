@@ -123,7 +123,7 @@ end
     end
 end
 
-@inline function isintersection(s::BSphere{2, T}, p::AbstractVector) where {T}
+@inline function isintersection(s::BSphere{3, T}, p::AbstractVector) where {T}
     @boundscheck begin
         @assert length(p) == 3
     end
