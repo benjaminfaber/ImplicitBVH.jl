@@ -72,7 +72,7 @@ function traverse_rays(
     @boundscheck begin
         # TODO check the container type of bvh leaves / nodes is the same as for points and directions
         @argcheck bvh.tree.levels >= start_level >= bvh.built_level
-        @argcheck size(points, 1) == size(directions, 1) == 3
+        @argcheck size(points, 1) == size(directions, 1) == ndims(bvh)
         @argcheck size(points, 2) == size(directions, 2)
     end
 
