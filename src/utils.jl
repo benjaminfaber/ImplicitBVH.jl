@@ -171,6 +171,30 @@ function dot2(x, y)
     x[1] * y[1] + x[2] * y[2]
 end
 
+function distsq(x, y)
+    _distsq(Val(length(x)), x, y)
+end
+
+function _distsq(::Val{3}, x, y)
+    dist3sq(x, y)
+end
+
+function _distsq(::Val{2}, x, y)
+    dist2sq(x, y)
+end
+
+function dist(x, y)
+    _dist(Val(length(x)), x, y)
+end
+
+function _dist(::Val{3}, x, y)
+    dist3sq(x, y)
+end
+
+function _dist(::Val{2}, x, y)
+    dist2sq(x, y)
+end
+
 function dist3sq(x, y)
     (x[1] - y[1]) * (x[1] - y[1]) +
     (x[2] - y[2]) * (x[2] - y[2]) +
