@@ -35,9 +35,9 @@ Base.ndims(::Type{BSphere{N, T}}) where {N, T} = N
 
 
 # Convenience constructors, with and without type parameter
-BSphere(x::AbstractVector, r) where {N, T} = BSphere(NTuple{length(x), eltype(x)}(x), eltype(x)(r))
+#BSphere{N, T}(x::AbstractVector, r) where {N, T} = BSphere(NTuple{N, T}(x), T(r))
 #BSphere(x::NTuple{N, T}, r::R) where {N, T, R <: Real} = BSphere{N, T}(x, r)
-#BSphere(x::AbstractVector, r::R) where {R <: Real} = BSphere{length(x), eltype(x)}(x, r)
+BSphere(x::AbstractVector, r::R) where {R <: Real} = BSphere(NTuple{length(x), eltype(x)}(x), eltype(x)(r))
 
 
 # Constructors from triangles
