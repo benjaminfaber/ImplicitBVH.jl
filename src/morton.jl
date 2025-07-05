@@ -1,7 +1,7 @@
 """
     $(TYPEDEF)
 
-Acceptable unsigned integer types for Morton encoding: $(MortonUnsigned).
+Supported unsigned integer types for Morton encoding: $(MortonUnsigned).
 """
 const MortonUnsigned = Union{UInt16, UInt32, UInt64}
 
@@ -149,70 +149,37 @@ end
     scaling = morton_scaling3(U)
     m = zero(U)
 
-    @inbounds for i in 1:3
-        scaled = (centre[i] - mins[i]) / (maxs[i] - mins[i])    # Scaling number between (0, 1)
-        index = unsafe_trunc(U, scaled * scaling)               # Scaling to (0, morton_scaling)
-        m += morton_split3(index) << (3 - i)                    # Shift into position - XYZXYZXYZ
-    end
+    # Scaling number between (0, 1)
+    scaled1 = (centre[1] - mins[1]) / (maxs[1] - mins[1])
+    scaled2 = (centre[2] - mins[2]) / (maxs[2] - mins[2])
+    scaled3 = (centre[3] - mins[3]) / (maxs[3] - mins[3])
 
+    # Scaling to (0, morton_scaling)
+    index1 = unsafe_trunc(U, scaled1 * scaling)
+    index2 = unsafe_trunc(U, scaled2 * scaling)
+    index3 = unsafe_trunc(U, scaled3 * scaling)
+
+    # Shift into position - XYZXYZXYZ
+    m = (morton_split3(index1) << 2) + (morton_split3(index2) << 1) + morton_split3(index3)
     m
 end
 
 @inline function _morton_encode_single(::Val{2}, centre, mins, maxs, ::Type{U}=UInt32) where {U <: MortonUnsigned}
     scaling = morton_scaling2(U)
-    m = zero(U)
+    # Scaling number between (0, 1)
+    scaled1 = (centre[1] - mins[1]) / (maxs[1] - mins[1])
+    scaled2 = (centre[2] - mins[2]) / (maxs[2] - mins[2])
 
-    @inbounds for i in 1:2
-        scaled = (centre[i] - mins[i]) / (maxs[i] - mins[i])    # Scaling number between (0, 1)
-        index = unsafe_trunc(U, scaled * scaling)               # Scaling to (0, morton_scaling)
-        m += morton_split2(index) << (2 - i)                    # Shift into position - XYXYXY
-    end
+    # Scaling to (0, morton_scaling)
+    index1 = unsafe_trunc(U, scaled1 * scaling)
+    index2 = unsafe_trunc(U, scaled2 * scaling)
 
+    # Shift into position - XYZXYZXYZ
+    m = (morton_split2(index1) << 1) + morton_split2(index2)
     m
 end
 
 function _compute_extrema(::Val{3}, bounding_volumes::AbstractVector, options)
-    # Fallback CPU version; extremely simple operations, so left single threaded
-    xmin, ymin, zmin = center(bounding_volumes[1])
-    xmax, ymax, zmax = xmin, ymin, zmin
-
-    @inbounds for i in 2:length(bounding_volumes)
-
-        xc, yc, zc = center(bounding_volumes[i])
-
-        xc < xmin && (xmin = xc)
-        yc < ymin && (ymin = yc)
-        zc < zmin && (zmin = zc)
-
-        xc > xmax && (xmax = xc)
-        yc > ymax && (ymax = yc)
-        zc > zmax && (zmax = zc)
-    end
-
-    (xmin, ymin, zmin), (xmax, ymax, zmax)
-end
-
-function _compute_extrema(::Val{2}, bounding_volumes::AbstractVector, options)
-    # Fallback CPU version; extremely simple operations, so left single threaded
-    xmin, ymin = center(bounding_volumes[1])
-    xmax, ymax = xmin, ymin
-
-    @inbounds for i in 2:length(bounding_volumes)
-
-        xc, yc = center(bounding_volumes[i])
-
-        xc < xmin && (xmin = xc)
-        yc < ymin && (ymin = yc)
-
-        xc > xmax && (xmax = xc)
-        yc > ymax && (ymax = yc)
-    end
-
-    (xmin, ymin), (xmax, ymax)
-end
-
-function _compute_extrema(bounding_volumes::AbstractGPUVector, options)
-    # GPU implementation
 
     function min_centers(a, b)
         # a and b are NTuple{3, Float}
@@ -241,6 +208,8 @@ function _compute_extrema(bounding_volumes::AbstractGPUVector, options)
         bounding_volumes,
         init=(floatmax(T), floatmax(T), floatmax(T)),
         neutral=(floatmax(T), floatmax(T), floatmax(T)),
+        max_tasks=options.num_threads,
+        min_elems=options.min_mortons_per_thread,
         block_size=options.block_size,
     )
 
@@ -250,10 +219,58 @@ function _compute_extrema(bounding_volumes::AbstractGPUVector, options)
         bounding_volumes,
         init=(floatmin(T), floatmin(T), floatmin(T)),
         neutral=(floatmin(T), floatmin(T), floatmin(T)),
+        max_tasks=options.num_threads,
+        min_elems=options.min_mortons_per_thread,
         block_size=options.block_size,
     )
 
     xyzmin, xyzmax
+end
+
+function _compute_extrema(::Val{2}, bounding_volumes::AbstractVector, options)
+
+    function min_centers(a, b)
+        # a and b are NTuple{2, Float}
+        (
+            a[1] < b[1] ? a[1] : b[1],
+            a[2] < b[2] ? a[2] : b[2]
+        )
+    end
+
+    function max_centers(a, b)
+        # a and b are NTuple{2, Float}
+        (
+            a[1] > b[1] ? a[1] : b[1],
+            a[2] > b[2] ? a[2] : b[2]
+        )
+    end
+
+    # Get numeric type of the inner bounding volume
+    T = eltype(eltype(bounding_volumes))
+
+    xymin = AK.mapreduce(
+        center,             # Take the centre of each bounding volume
+        min_centers,        # Reduce to the 2D minimum
+        bounding_volumes,
+        init=(floatmax(T), floatmax(T)),
+        neutral=(floatmax(T), floatmax(T)),
+        max_tasks=options.num_threads,
+        min_elems=options.min_mortons_per_thread,
+        block_size=options.block_size,
+    )
+
+    xymax = AK.mapreduce(
+        center,
+        max_centers,
+        bounding_volumes,
+        init=(floatmin(T), floatmin(T)),
+        neutral=(floatmin(T), floatmin(T)),
+        max_tasks=options.num_threads,
+        min_elems=options.min_mortons_per_thread,
+        block_size=options.block_size,
+    )
+
+    xymin, xymax
 end
 
 """
@@ -342,7 +359,6 @@ function morton_encode!(
     AK.foreachindex(
         mortons,
         block_size=options.block_size,
-        scheduler=options.scheduler,
         max_tasks=options.num_threads,
         min_elems=options.min_mortons_per_thread,
     ) do i
