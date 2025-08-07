@@ -346,11 +346,10 @@ function morton_encode!(
     maxs,
     options=BVHOptions(),
 ) where {U <: MortonUnsigned}
-    N = ndims(first(bounding_volumes))
     # Bounds checking
     @argcheck firstindex(mortons) == firstindex(bounding_volumes) == 1
-    @argcheck length(mortons) == length(bounding_volumes)
-    @argcheck length(mins) == length(maxs) == N
+    argcheck length(mortons) == length(bounding_volumes)
+    @argcheck length(mins) == length(maxs)
 
     # Trivial case
     length(bounding_volumes) == 0 && return nothing

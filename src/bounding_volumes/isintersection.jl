@@ -139,10 +139,12 @@ end
     dist2sq(s.x, p) < s.r ^ 2
 end
 
-function squared_distance(a::BSphere{N, T}, b::BBox{N, T}) where {N, T}
-    u = b.lo .- a.x
-    v = a.x .- b.up
-    d_min = max.(max.(u, v), zero(T))
-    d_max = min.(u, v)
+function squared_distance(x::AbstractVector, b::BBox{N, T}, d_min::AbstractVector, d_max::AbstractVector) where {N, T}
+    @inbounds for i in 1:N
+        u = b.lo[i] - x[i]
+        v = x[i] - b.up[i]
+        d_min[i] = max(max(u, v), zero(T))
+        d_max[i] = min(u, v)
+    end
     return _dot(Val(N), d_min, d_min), _dot(Val(N), d_max, d_max)
 end
